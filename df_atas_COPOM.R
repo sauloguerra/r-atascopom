@@ -16,7 +16,7 @@ json_novas <- getURL(glue("{url}{api_novas}"))
 df_atas_antigas <- fromJSON(json_antigas, flatten = TRUE) %>%
   .$conteudo %>%
   select(DataReferencia, Titulo, LinkPagina) %>%
-  mutate(Tipo = "txt") %$%
+  mutate(Tipo = "html") %$%
   glimpse(.)
 
 df_atas_novas <- fromJSON(json_novas, flatten = TRUE) %>%
@@ -28,7 +28,7 @@ df_atas_novas <- fromJSON(json_novas, flatten = TRUE) %>%
 df_atas <- bind_rows(df_atas_novas, df_atas_antigas) %$%
   glimpse(.)
 
-conteudo_txt <- function(link, url = "https://www.bcb.gov.br") {
+conteudo_html <- function(link, url = "https://www.bcb.gov.br") {
   api <- "/api/servico/sitebcb/atascopom-conteudo/principal?filtro=IdentificadorUrl"
   codigo <- str_extract_all(link, "\\d+")
   codigo <- URLencode(glue(" eq '{codigo}'"), reserved = T)
@@ -58,10 +58,30 @@ final <- df_atas %>%
         return(conteudo_pdf(.y))
       }
 
-      return(conteudo_txt(.y))
+      return(conteudo_html(.y))
     })
   )
 
 glimpse(final)
+
+parcial <- function(texto) {
+  paste(
+    str_sub(texto, end = 500),
+    "(.......)",
+    str_sub(texto, -500)
+  )
+}
+
+final %>%
+  slice(1) %>%
+  mutate(integra = parcial(integra))
+
+final %>%
+  slice(10) %>%
+  mutate(integra = parcial(integra))
+
+final %>%
+  slice(20) %>%
+  mutate(integra = parcial(integra))
 
 fst::write_fst(final, "./output/df_atas.fst")
